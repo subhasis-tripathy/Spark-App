@@ -91,6 +91,16 @@ nav{backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
 .cbox{position:relative;width:min(92vw,380px);text-align:center;background:var(--s1);border:1px solid var(--ln);border-radius:28px;padding:28px 22px;box-shadow:0 24px 70px -24px var(--st);animation:pop .5s cubic-bezier(.2,1.4,.3,1) both}.trophy{font-size:4.5rem;line-height:1.1;animation:bob 1.6s ease-in-out infinite}
 @keyframes pop{from{transform:scale(.7);opacity:0}}@keyframes bob{50%{transform:translateY(-8px) rotate(-6deg)}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+/* ---- SPARK 2.0: obsidian + champagne gold + platinum ---- */
+:root{--bg:#090A0D;--s1:#111318;--s2:#191C23;--tx:#F5F5F3;--mu:#9297A1;--ln:rgba(255,255,255,.08);--st:#C8AD78;--st2:#A99163;--wa:#C7CFD9;--ok:#6FCF97;--on:#17130A}
+[data-t=light]{--bg:#F6F5F1;--s1:#FFFFFF;--s2:#ECEAE3;--tx:#14161A;--mu:#5A606A;--ln:rgba(0,0,0,.1);--st:#8A6D2F;--st2:#6E5622;--wa:#4A5563;--ok:#12794F;--on:#FFFFFF}
+body{background:var(--bg)}
+.card{background:var(--s1);border:1px solid var(--ln);box-shadow:none}.card:hover{transform:none}
+.btn,.chip[aria-pressed=true]{background:var(--st);color:var(--on);box-shadow:none}
+.pb i,.col .bar{background:var(--st)}.pb.w i,.fill{background:var(--wa)}
+.ring .p{filter:drop-shadow(0 0 8px color-mix(in srgb,var(--st) 35%,transparent))}
+nav{background:color-mix(in srgb,var(--s2) 55%,transparent);backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%);border:1px solid rgba(255,255,255,.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 16px 40px rgba(0,0,0,.45)}
+#cel{background:rgba(9,10,13,.7);backdrop-filter:blur(14px)}.cbox{box-shadow:0 24px 70px -30px var(--st)}
 </style>
 </head>
 <body>
@@ -399,7 +409,7 @@ function celebrate(k,v,g){buzz();try{navigator.vibrate&&navigator.vibrate([60,40
  o.innerHTML=`<canvas id="cfc" aria-hidden="true"></canvas><div class="cbox"><div class="trophy" aria-hidden="true">${s?'🏆':'💧'}</div><h2>${s?'Step goal achieved!':'Water goal achieved!'}</h2><p>${s?`You walked <b>${nf(v)}</b> steps today. Your goal was ${nf(g)}.`:`You drank <b>${fW(v)}</b> today. Your goal was ${fW(g)}.`}</p><p class="mu" style="margin:6px 0 16px">${s?'Every step counts, and today you proved it.':'Your body says thank you. Keep it flowing.'}</p><button class="btn" id="cs" style="width:100%">Share this win</button><button class="btn2" id="cx" style="width:100%;margin-top:10px">Keep going</button></div>`;
  document.body.append(o);const close=()=>o.remove();o.querySelector('#cx').onclick=close;o.querySelector('#cs').onclick=()=>{close();storySheet()};o.addEventListener('keydown',e=>{if(e.key==='Escape')close()});o.querySelector('#cx').focus();
  if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
- const c=o.querySelector('#cfc'),x=c.getContext('2d'),cols=['#ff8a3d','#ff4d8d','#38c8ff','#5df2b0','#ffd23e'];c.width=innerWidth;c.height=innerHeight;
+ const c=o.querySelector('#cfc'),x=c.getContext('2d'),cols=['#C8AD78','#A99163','#C7CFD9','#F5F5F3','#6FCF97'];c.width=innerWidth;c.height=innerHeight;
  const ps=[...Array(130)].map(()=>({x:Math.random()*c.width,y:-20-Math.random()*c.height*.6,vx:(Math.random()-.5)*3,vy:2+Math.random()*4,s:6+Math.random()*8,r:Math.random()*6,vr:(Math.random()-.5)*.3,c:cols[Math.random()*5|0]}));
  let f=0;(function an(){if(!o.isConnected||f++>280)return;x.clearRect(0,0,c.width,c.height);ps.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;x.save();x.translate(p.x,p.y);x.rotate(p.r);x.fillStyle=p.c;x.fillRect(-p.s/2,-p.s/4,p.s,p.s/2);x.restore()});requestAnimationFrame(an)})()}
 /* ===== GPS walk tracker (route line like Strava) ===== */
@@ -432,6 +442,65 @@ function routeLayout(x,W,put,fit,rr,ac,tx,mu,tr,st,g,p,d){const r=latestRoute(),
 /* ===== Boot ===== */
 load();apply();mq.addEventListener&&mq.addEventListener('change',apply);pwa();setInterval(tick,6e4);
 if(S.onboarded){const q=new URLSearchParams(location.search).get('view');V={water:'wat',activity:'act',insights:'ins'}[q]||'home';render();if(NATIVE)Native.start();else if(S.settings.auto&&Sensor.supported()&&!Sensor.needsPerm())Sensor.start();if(q==='glance')glance()}else showOb(0);
+/* ===== SPARK 2.0 modules: journey, challenges, badges, records, reminders ===== */
+(()=>{
+const XK='spark_x2',X=(()=>{try{return JSON.parse(localStorage.getItem(XK))||{}}catch(e){return{}}})(),sx=()=>{try{localStorage.setItem(XK,JSON.stringify(X))}catch(e){}};
+X.rem=X.rem||{f:0};X.ch=X.ch||{};let jm=0;
+const mon=d=>ad(d,-((new Date(d+'T00:00:00').getDay()+6)%7)),wk=m=>[...Array(7)].map((_,i)=>ad(m,i));
+const hit=d=>steps(d)>0&&steps(d)>=goalFor(d),days=()=>Object.keys(S.dailyRecords).filter(d=>steps(d)>0).sort();
+const CH=[['g4','Hit your step goal on 4 days',4,w=>w.filter(hit).length,n=>n+' of 4 days'],['st','Walk '+'a weekly total of '+'5 daily goals',null,w=>w.reduce((s,d)=>s+steps(d),0),n=>nf(n)],['a5','Be active on 5 days',5,w=>w.filter(active).length,n=>n+' of 5 days'],['w4','Hit your water goal on 4 days',4,w=>w.filter(d=>water(d)>=S.settings.waterGoal&&water(d)>0).length,n=>n+' of 4 days']];
+const tgt=c=>c[2]||S.settings.stepGoal*5;
+function cal(){const t=new Date(),m=new Date(t.getFullYear(),t.getMonth()+jm,1),y=m.getFullYear(),mo=m.getMonth(),n=new Date(y,mo+1,0).getDate(),lead=(m.getDay()+6)%7,today=dk();
+ let c='';for(let i=0;i<lead;i++)c+='<span></span>';
+ for(let d=1;d<=n;d++){const k=y+'-'+pad(mo+1)+'-'+pad(d),r=Math.min(1,steps(k)/goalFor(k)),f=k>today;
+ c+=`<span role="img" aria-label="${k}: ${nf(steps(k))} steps" style="aspect-ratio:1;display:grid;place-items:center;border-radius:12px;font-size:.8rem;${k===today?'outline:1px solid var(--st);':''}background:${f?'transparent':active(k)?`color-mix(in srgb,var(--st) ${Math.round(25+r*65)}%,var(--s2))`:'var(--s2)'};color:${r>=1?'var(--on)':'var(--mu)'}">${d}</span>`}
+ return `<section class="card" aria-label="Activity journey"><div class="row sb"><h3>${m.toLocaleDateString([],{month:'long',year:'numeric'})}</h3><div class="row"><button class="ib" data-act="j_mo" data-n="-1" aria-label="Previous month">‹</button><button class="ib" data-act="j_mo" data-n="1" aria-label="Next month">›</button></div></div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:12px">${c}</div><p class="note">Brighter gold means closer to your goal. A quiet day is just a quiet day.</p></section>`}
+function chal(){const m=mon(dk()),w=wk(m),id=X.ch[m],c=CH.find(x=>x[0]===id);
+ if(!c)return `<section class="card" aria-label="Weekly challenge"><h3>This week's challenge</h3><p class="note">Pick one. You can skip weeks freely.</p><div style="display:grid;gap:8px;margin-top:10px">${CH.map(x=>`<button class="btn2" data-act="j_ch" data-id="${x[0]}">${x[1]}</button>`).join('')}</div></section>`;
+ const v=c[3](w),T=tgt(c),p=Math.min(1,v/T);
+ return `<section class="card" aria-label="Weekly challenge"><div class="row sb"><h3>This week's challenge</h3><b style="color:var(--st)">${p>=1?'Completed':Math.round(p*100)+'%'}</b></div><p>${c[1]}</p><div class="pb"><i style="width:${p*100}%"></i></div><p class="note">${c[4](v)}${c[2]?'':' of '+nf(T)} · resets Monday</p></section>`}
+function stats(){const ds=days(),sk=streaks(),best=ds.reduce((a,d)=>steps(d)>steps(a||ds[0])?d:a,null),tot=ds.reduce((s,d)=>s+steps(d),0),sg=sk.sg,wg=sk.wg;
+ const mx=ds.length?steps(best):0,mm=Math.max(0,...[...new Set(S.activities.map(a=>a.date))].map(mins));
+ const wks={};ds.forEach(d=>{const k=mon(d);wks[k]=(wks[k]||0)+steps(d)});const bw=Math.max(0,...Object.values(wks));
+ const B=[['★','First steps',ds.length>0],['◆','5,000 step day',mx>=5000],['✦','10,000 step day',mx>=10000],['3','3 day streak',sk.best>=3],['7','7 day streak',sk.best>=7],['30','30 day streak',sk.best>=30],['◎','Goal hit 7 times',sg>=7],['≋','Water goal 7 times',wg>=7],['∞','100,000 lifetime steps',tot>=1e5]];
+ const rec=[['Best day',mx?nf(mx)+' steps':'none yet'],['Best week',bw?nf(bw)+' steps':'none yet'],['Longest streak',sk.best+' days'],['Most active minutes',mm?mm+' min':'none yet']];
+ const t=dk(),tw=wk(mon(t)).filter(d=>d<=t),lw=wk(ad(mon(t),-7)),a=tw.reduce((s,d)=>s+steps(d),0)/tw.length,b=lw.reduce((s,d)=>s+steps(d),0)/7;
+ const ins=b>0&&a>0?`Your daily average this week is ${nf(a)} steps, ${a>=b?Math.round((a/b-1)*100)+'% above':Math.round((1-a/b)*100)+'% below'} last week (${nf(b)}).`:'Log steps for two weeks to see how this week compares with last week.';
+ const wd=[0,0,0,0,0,0,0],wn=[0,0,0,0,0,0,0];ds.forEach(d=>{const i=(new Date(d+'T00:00:00').getDay()+6)%7;wd[i]+=steps(d);wn[i]++});
+ const N=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],bi=wd.map((v,i)=>wn[i]?v/wn[i]:0).reduce((m,v,i,x)=>v>x[m]?i:m,0);
+ const ins2=ds.length>=7?`${N[bi]} is your strongest day on average.`:'';
+ return `<section class="card" aria-label="Insights"><h3>Insights</h3><p>${ins}</p>${ins2?'<p>'+ins2+'</p>':''}</section>
+<section class="card" aria-label="Personal records"><h3>Personal records</h3>${rec.map(r=>`<div class="row sb" style="padding:8px 0;border-bottom:1px solid var(--ln)"><span class="mu">${r[0]}</span><b>${r[1]}</b></div>`).join('')}</section>
+<section class="card" aria-label="Achievements"><h3>Achievements</h3><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:10px">${B.map(x=>`<div style="text-align:center;opacity:${x[2]?1:.4}"><div style="width:62px;height:62px;margin:auto;border-radius:50%;display:grid;place-items:center;font-size:1.4rem;color:var(--st);border:1px solid ${x[2]?'var(--st)':'var(--ln)'};background:var(--s2)">${x[0]}</div><p class="note" style="margin:6px 0 0">${x[1]}${x[2]?'':' (locked)'}</p></div>`).join('')}</div></section>`}
+const oi=VW.ins;VW.ins=()=>cal()+chal()+stats()+oi();
+const nv=NAV.find(n=>n[0]==='ins');if(nv)nv[1]='Journey';
+/* contextual home message */
+const oh=VW.home;VW.home=()=>{const h=oh(),s=steps(dk()),g=S.settings.stepGoal,l=g-s;if(!S.onboarded)return h;
+ const m=s>=g?'Goal complete. Today counts.':s===0?'A short walk is a good start.':l<=g*.3?`Just ${nf(l)} steps left to complete today's goal.`:"You're building momentum.";
+ return h.replace('<section class="card hero',`<p style="text-align:center;font-family:Georgia,serif;font-size:1.25rem;margin:4px 0 10px">${m}</p><section class="card hero`)};
+/* reminders */
+const NAT=!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()),LN=NAT?Capacitor.Plugins.LocalNotifications:null;
+const nm=()=>(S.profile.name||'').trim().split(' ')[0],hi=()=>nm()?nm()+', ':'';
+const POOL=l=>[`${hi()}${nf(l)} steps left. Your couch will survive without you.`,`Only ${nf(l)} to go. Future you says thanks.`,`${nf(l)} steps stand between you and a satisfying day.`,`Your steps called. They miss you. ${nf(l)} to go.`,`Even a snail would finish ${nf(l)} steps by now. Go on.`,`Small walk, big streak. ${nf(l)} steps left.`,`${hi()}a ten minute walk closes most of this gap.`,`Stand up, stretch, step. ${nf(l)} to go.`];
+const GEN=()=>[`${hi()}your ${nf(S.settings.stepGoal)} step goal is waiting. A short walk helps.`,`Time for a quick walk? Open SPARK to see how many steps are left.`,`Your couch will survive without you. Take a lap.`,`Small walk, big streak. Open SPARK to check your progress.`,`Future you says thanks for every step today.`,`Even a snail would be moving by now. Your turn.`];
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const msgNow=()=>{const l=S.settings.stepGoal-steps(dk());return l<=0?`${hi()}goal complete. Nice work today.`:pick(POOL(l))};
+function nextAt(from){const f=X.rem.f;if(!f)return 0;let t=new Date(from);
+ if(f==='me'){for(let i=0;i<3;i++){for(const h of[9,18]){const c=new Date(t);c.setDate(t.getDate()+i);c.setHours(h,0,0,0);if(c>from)return +c}}}
+ let n=new Date(+from+(+f)*36e5);if(n.getHours()<8){n.setHours(8,0,0,0)}else if(n.getHours()>=21){n.setDate(n.getDate()+1);n.setHours(8,0,0,0)}return +n}
+async function sched(){if(!LN)return;try{const p=await LN.getPending();if(p.notifications&&p.notifications.length)await LN.cancel({notifications:p.notifications});if(!X.rem.f)return;
+ const pm=await LN.requestPermissions();if(pm.display!=='granted')return;let t=Date.now(),L=[];for(let i=0;i<48;i++){t=nextAt(t);if(!t)break;L.push({id:1000+i,title:'SPARK',body:pick(GEN()),schedule:{at:new Date(t),allowWhileIdle:true}})}
+ if(L.length)await LN.schedule({notifications:L})}catch(e){}}
+function fire(m){if(!NAT&&'Notification' in window&&Notification.permission==='granted'){try{new Notification('SPARK',{body:m});return}catch(e){}}toast(m)}
+setInterval(()=>{if(!X.rem.f||NAT)return;const n=Date.now();if(!X.rem.next)X.rem.next=nextAt(n);if(n>=X.rem.next){X.rem.next=nextAt(n);sx();fire(msgNow())}},6e4);
+const FQ=[['0','Off'],['1','Every hour'],['2','Every 2 hours'],['3','Every 3 hours'],['me','Morning and evening']];
+const rem=()=>`<section class="card" aria-label="Reminders"><h3>Reminders</h3><p class="note">Choose how often SPARK nudges you, between 8:00 and 21:00. Messages are motivating, sometimes funny.${NAT?'':' In the browser they only fire while SPARK is open; the Android app schedules them in the background.'}</p><div class="row" role="group" aria-label="Reminder frequency" style="margin-top:10px">${FQ.map(f=>`<button type="button" class="chip" data-act="j_rem" data-f="${f[0]}" aria-pressed="${String(X.rem.f)===f[0]||(!X.rem.f&&f[0]==='0')}">${f[1]}</button>`).join('')}</div><div style="margin-top:12px"><button class="btn2" data-act="j_test">Send a test nudge</button></div></section>`;
+const op=VW.pro;VW.pro=()=>op()+rem();
+Object.assign(A,{j_mo:d=>{jm+=+d.n;render(true)},j_ch:d=>{X.ch[mon(dk())]=d.id;sx();render(true)},
+ j_rem:d=>{X.rem.f=d.f==='0'?0:d.f;X.rem.next=0;sx();if(!NAT&&X.rem.f&&'Notification' in window&&Notification.permission==='default')Notification.requestPermission();sched();render(true)},
+ j_test:()=>fire(msgNow())});
+sched();if(S.onboarded&&document.getElementById('v'))render(true);
+})();
 </script>
 </body>
 </html>
