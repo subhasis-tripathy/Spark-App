@@ -1,4 +1,5 @@
+// Copies everything in app/ (index.html, fonts/, assets/, ...) into www/, which Capacitor packages into the APK.
 const fs = require("fs");
-fs.mkdirSync("www", { recursive: true });
-fs.copyFileSync("app/index.html", "www/index.html");
-console.log("Copied app/index.html -> www/index.html");
+fs.rmSync("www", { recursive: true, force: true });
+fs.cpSync("app", "www", { recursive: true });
+console.log("Copied app/ -> www/:", fs.readdirSync("www").join(", "));

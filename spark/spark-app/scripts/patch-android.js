@@ -14,8 +14,6 @@ public class MainActivity extends BridgeActivity {
 
 W("StepCounterPlugin.java", `package com.subhasis.spark;
 import android.Manifest;
-import android.appwidget.AppWidgetManager;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -52,28 +50,6 @@ public class StepCounterPlugin extends Plugin {
     SharedPreferences p = getContext().getSharedPreferences("spark_steps", 0);
     try { JSObject r = new JSObject(); r.put("days", new JSObject(p.getString("days", "{}"))); c.resolve(r); }
     catch (Exception e) { c.reject("Could not read steps"); }
-  }
-  @PluginMethod public void setTotal(PluginCall c) {
-    try {
-      String d = c.getString("d", ""); int n = c.getInt("n", 0);
-      SharedPreferences p = getContext().getSharedPreferences("spark_steps", 0);
-      int nat = new JSONObject(p.getString("days", "{}")).optInt(d, 0);
-      p.edit().putString("offDate", d).putInt("off", n - nat).apply();
-      SparkWidget.refresh(getContext());
-      if (p.getLong("last", -1) >= 0) ((NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE)).notify(1, StepService.note(getContext(), n));
-      c.resolve();
-    } catch (Exception e) { c.reject("setTotal failed"); }
-  }
-  @PluginMethod public void setGoal(PluginCall c) {
-    getContext().getSharedPreferences("spark_steps", 0).edit().putInt("goal", Math.max(1, c.getInt("n", 8000))).apply();
-    SparkWidget.refresh(getContext()); c.resolve();
-  }
-  @PluginMethod public void pinWidget(PluginCall c) {
-    try {
-      AppWidgetManager m = AppWidgetManager.getInstance(getContext());
-      boolean ok = Build.VERSION.SDK_INT >= 26 && m.isRequestPinAppWidgetSupported() && m.requestPinAppWidget(new ComponentName(getContext(), SparkWidget.class), null, null);
-      JSObject r = new JSObject(); r.put("requested", ok); c.resolve(r);
-    } catch (Exception e) { c.reject("Widget not supported"); }
   }
   @PluginMethod public void saveFile(PluginCall c) {
     try {
@@ -153,7 +129,7 @@ public class StepService extends Service implements SensorEventListener {
       while (ks.size() > 45) o.remove(ks.pollFirst());
       p.edit().putLong("last", raw).putString("days", o.toString()).apply();
       long now = SystemClock.elapsedRealtime();
-      if (d > 0 && now - lastNote > 3000) { lastNote = now; getSystemService(NotificationManager.class).notify(1, note(o.optInt(k, 0) + off(k))); SparkWidget.refresh(this); }
+      if (d > 0 && now - lastNote > 3000) { lastNote = now; getSystemService(NotificationManager.class).notify(1, note(o.optInt(k, 0) + off(k))); }
     } catch (Exception x) { }
   }
   @Override public void onAccuracyChanged(Sensor s, int a) { }
@@ -174,85 +150,6 @@ public class BootReceiver extends BroadcastReceiver {
 }
 `);
 
-W("SparkWidget.java", `package com.subhasis.spark;
-import android.app.PendingIntent;
-import android.appwidget.AppWidgetManager;
-import android.appwidget.AppWidgetProvider;
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
-import android.content.SharedPreferences;
-import android.widget.RemoteViews;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
-import org.json.JSONObject;
-
-public class SparkWidget extends AppWidgetProvider {
-  @Override public void onUpdate(Context c, AppWidgetManager m, int[] ids) {
-    for (int id : ids) m.updateAppWidget(id, build(c));
-  }
-  public static void refresh(Context c) {
-    try {
-      AppWidgetManager m = AppWidgetManager.getInstance(c);
-      int[] ids = m.getAppWidgetIds(new ComponentName(c, SparkWidget.class));
-      for (int id : ids) m.updateAppWidget(id, build(c));
-    } catch (Exception e) { }
-  }
-  static RemoteViews build(Context c) {
-    SharedPreferences p = c.getSharedPreferences("spark_steps", 0);
-    String k = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
-    int n = 0;
-    try {
-      n = new JSONObject(p.getString("days", "{}")).optInt(k, 0);
-      if (k.equals(p.getString("offDate", ""))) n += p.getInt("off", 0);
-    } catch (Exception e) { }
-    if (n < 0) n = 0;
-    int g = Math.max(1, p.getInt("goal", 8000));
-    int pct = Math.min(100, (int) (n * 100L / g));
-    RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.spark_widget);
-    v.setTextViewText(R.id.w_steps, String.format(Locale.US, "%,d", n));
-    v.setTextViewText(R.id.w_goal, String.format(Locale.US, "of %,d steps  -  %d%%", g, pct));
-    v.setProgressBar(R.id.w_bar, 100, pct, false);
-    PendingIntent pi = PendingIntent.getActivity(c, 0, new Intent(c, MainActivity.class), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-    v.setOnClickPendingIntent(R.id.w_root, pi);
-    return v;
-  }
-}
-`);
-
-const resDir = "android/app/src/main/res";
-for (const d of ["layout", "drawable", "xml"]) fs.mkdirSync(path.join(resDir, d), { recursive: true });
-fs.writeFileSync(path.join(resDir, "layout/spark_widget.xml"), `<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/w_root" android:layout_width="match_parent" android:layout_height="match_parent"
-    android:orientation="vertical" android:gravity="center_vertical" android:padding="16dp"
-    android:background="@drawable/spark_widget_bg">
-    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:text="SPARK" android:textColor="#C8AD78" android:textSize="11sp" android:textStyle="bold" />
-    <TextView android:id="@+id/w_steps" android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:text="0" android:textColor="#F5F5F3" android:textSize="34sp" android:fontFamily="serif" />
-    <TextView android:id="@+id/w_goal" android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:text="steps today" android:textColor="#9297A1" android:textSize="12sp" />
-    <ProgressBar android:id="@+id/w_bar" style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent" android:layout_height="6dp" android:layout_marginTop="10dp"
-        android:max="100" android:progress="0" android:progressTint="#C8AD78" android:progressBackgroundTint="#2A2D35" />
-</LinearLayout>
-`);
-fs.writeFileSync(path.join(resDir, "drawable/spark_widget_bg.xml"), `<?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="#111318" />
-    <corners android:radius="22dp" />
-    <stroke android:width="1dp" android:color="#33363F" />
-</shape>
-`);
-fs.writeFileSync(path.join(resDir, "xml/spark_widget_info.xml"), `<?xml version="1.0" encoding="utf-8"?>
-<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    android:minWidth="180dp" android:minHeight="110dp" android:updatePeriodMillis="1800000"
-    android:initialLayout="@layout/spark_widget" android:resizeMode="horizontal|vertical"
-    android:widgetCategory="home_screen" />
-`);
-
 const mf = "android/app/src/main/AndroidManifest.xml";
 let m = fs.readFileSync(mf, "utf8");
 if (!m.includes("StepService")) {
@@ -260,14 +157,23 @@ if (!m.includes("StepService")) {
     .map((p) => `    <uses-permission android:name="android.permission.${p}" />\n`).join("");
   m = m.replace("<application", perms + '    <uses-feature android:name="android.hardware.location.gps" android:required="false" />\n    <application');
   m = m.replace("</application>", `        <service android:name=".StepService" android:exported="false" android:foregroundServiceType="health" />
-        <receiver android:name=".SparkWidget" android:exported="false">
-            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-            <meta-data android:name="android.appwidget.provider" android:resource="@xml/spark_widget_info" />
-        </receiver>
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /></intent-filter>
         </receiver>
     </application>`);
   fs.writeFileSync(mf, m);
 }
+// ---- App icon: generated from the SPARK logo (spark-app/icon/*), installed over Capacitor's default icon ----
+const res = "android/app/src/main/res";
+for (const d of fs.readdirSync("icon")) {
+  const to = path.join(res, d); fs.mkdirSync(to, { recursive: true });
+  for (const old of fs.existsSync(to) ? fs.readdirSync(to) : []) if (/^ic_launcher.*\.(webp|png)$/.test(old)) fs.unlinkSync(path.join(to, old));
+  for (const f of fs.readdirSync(path.join("icon", d))) fs.copyFileSync(path.join("icon", d, f), path.join(to, f));
+}
+fs.mkdirSync(path.join(res, "values"), { recursive: true });
+fs.writeFileSync(path.join(res, "values", "ic_launcher_background.xml"), '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#000000</color>\n</resources>\n');
+const any = path.join(res, "mipmap-anydpi-v26"); fs.mkdirSync(any, { recursive: true });
+const adaptive = '<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@color/ic_launcher_background"/>\n    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>\n</adaptive-icon>\n';
+fs.writeFileSync(path.join(any, "ic_launcher.xml"), adaptive); fs.writeFileSync(path.join(any, "ic_launcher_round.xml"), adaptive);
+for (const f of ["drawable-v24/ic_launcher_foreground.xml", "drawable/ic_launcher_background.xml"]) { try { fs.unlinkSync(path.join(res, f)); } catch (e) {} }
 console.log("Android project patched.");
